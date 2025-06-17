@@ -23,12 +23,10 @@ jobs:
           RETRY_DELAY=5
           COUNTER=0
 
+          # URL-кодирование через встроенный Python one-liner
           urlencode() {
-            python3 - <<PY "$1"
-            import urllib.parse, sys
-            print(urllib.parse.quote_plus(sys.argv[1]))
-            PY
-                      }
+            python3 -c "import urllib.parse, sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$1"
+          }
 
           REPO=$(urlencode "${{ github.repository }}")
           CUR_COMMIT=$(urlencode "${{ github.sha }}")
@@ -55,3 +53,4 @@ jobs:
 
           echo "Failed to notify server after $MAX_RETRIES attempts"
           exit 1
+
