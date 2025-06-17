@@ -2,55 +2,37 @@ name: Notify Server
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  notify-server:
+  notify:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Notify Message-Broker (with retry)
+      - name: Notify Server with Retries
         env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          APP_TOKEN:   ${{ secrets.APP_TOKEN }}
+          SERVER_URL: ${{ secrets.SERVER_URL }}
         run: |
-          set -euo pipefail
-
           MAX_RETRIES=5
           RETRY_DELAY=5
           COUNTER=0
 
-          # URL-кодирование через встроенный Python one-liner
-          urlencode() {
-            python3 -c "import urllib.parse, sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$1"
-          }
-
-          REPO=$(urlencode "${{ github.repository }}")
-          CUR_COMMIT=$(urlencode "${{ github.sha }}")
-          PREV_COMMIT=$(urlencode "${{ github.event.before }}")
-          PUSHER=$(urlencode "${{ github.actor }}")
-
-          PATH="/api/forward"
-
           while [ $COUNTER -lt $MAX_RETRIES ]; do
-            URL="https://${SERVER_HOST}${PATH}?appToken=${APP_TOKEN}&repositoryName=${REPO}&currentCommit=${CUR_COMMIT}&prevCommit=${PREV_COMMIT}&pusherName=${PUSHER}"
+            RESPONSE=$(curl -s -o response.txt -w "%{http_code}" -X POST "$SERVER_URL/api/forward?appToken=${{ secrets.APP_TOKEN }}&repositoryName=${{ github.repository }}&currentCommit=${{ github.sha }}&prevCommit=${{ github.event.before }}&pusherName=${{ github.actor }}")
 
-            echo "[$COUNTER] POST $URL"
-            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$URL")
-
-            if [ "$HTTP_CODE" -eq 200 ]; then
-              echo "✅ Notification sent (HTTP $HTTP_CODE)"
+            if [ "$RESPONSE" -eq 200 ]; then
+              echo "Notification sent successfully!"
               exit 0
+            else
+              echo "Failed to notify server (HTTP $RESPONSE), response: $(cat response.txt)"
+              echo "Retrying in $RETRY_DELAY seconds..."
+              sleep $RETRY_DELAY
+              COUNTER=$((COUNTER + 1))
             fi
-
-            echo "❌ Got HTTP $HTTP_CODE — retry in ${RETRY_DELAY}s"
-            sleep "$RETRY_DELAY"
-            COUNTER=$((COUNTER + 1))
           done
 
-          echo "Failed to notify server after $MAX_RETRIES attempts"
+          echo "Failed to notify server after $MAX_RETRIES attempts. Final response: $(cat response.txt)"
           exit 1
-
