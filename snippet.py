@@ -5,6 +5,8 @@ url = (
     "https://newsapi.org/v2/top-headlines?"
     "country=us&"
     f"apiKey={API_KEY}"
+
+    asdfasdfasd
 )
 
 response = requests.get(url)
