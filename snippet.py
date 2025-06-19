@@ -7,7 +7,7 @@ url = (
     f"apiKey={API_KEY}"
 )
 
-new test
+new testasdfasd
 response = requests.get(url)
 data = response.json()
 
