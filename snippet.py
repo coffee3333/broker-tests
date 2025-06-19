@@ -7,6 +7,9 @@ url = (
     f"apiKey={API_KEY}"
 )
 
+
+test
+
 response = requests.get(url)
 data = response.json()
 
