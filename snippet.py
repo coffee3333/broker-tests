@@ -7,8 +7,6 @@ url = (
     f"apiKey={API_KEY}"
 )
 
-new testasdfasd
-asdfasdfasd
 response = requests.get(url)
 data = response.json()
 
